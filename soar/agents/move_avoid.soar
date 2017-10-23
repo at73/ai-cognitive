@@ -1,0 +1,218 @@
+################################################################
+# These are the final versions of the rules 
+# for the generalized move and avoid others eaters operator
+# 
+
+# Initialize*state*directions
+
+sp {initialize*state*directions
+   (state <ss> ^type state)
+   -->
+   (<ss> ^directions <n> <e> <s> <w>)  
+   (<n> ^value north ^opposite south)
+   (<e> ^value east  ^opposite west)
+   (<s> ^value south ^opposite north)
+   (<w> ^value west  ^opposite east)}
+
+# Propose*move:
+# If there is normalfood, bonusfood, eater, or empty in an adjacent cell,  
+#    propose move in the direction of that cell
+#    and indicate that this operator can be selected randomly.
+
+sp {propose*move
+   (state <s> ^io.input-link.my-location <loc>)
+   (<loc> ^<dir>.content { <cont> <> wall })
+-->
+   (<s> ^operator <o> + =)
+   (<o> ^name move
+        ^direction <dir>
+        ^content <cont>)}
+
+
+# Apply*move
+# If the move operator for a direction is selected,
+#    generate an output command to move in that direction.
+
+sp {apply*move
+   (state <s> ^io.output-link <ol>
+              ^operator <o>)
+   (<o> ^name move
+        ^direction <dir>)
+-->
+   (<ol> ^move.direction <dir>)}  
+
+
+# Apply*move*remove-move:
+# If the move operator is selected,
+#    and there is a completed move command on the output link,
+#    then remove that command.
+
+sp {apply*move*remove-move
+   (state <s> ^io.output-link <ol>
+              ^operator.name move)
+   (<ol> ^move <dir>)
+   (<dir> ^status complete)
+-->
+   (<ol> ^move <dir> -)}
+
+
+# Propose*move-avoid:
+# If there is not wall in an adjacent cell, 
+#    and there is another eaters in a cell two away from the eater 
+#    propose move in the direction of opposite cell
+#    and indicate that this operator can be selected randomly.
+
+sp {propose*move2
+   (state <s> ^io.input-link <io>
+              ^directions <d>)
+   (<d> ^value <dir>
+        ^opposite <o-dir>)
+   (<io> ^my-location <loc>
+         ^eater.name <my-name>)
+   (<loc> ^<dir>.content <> wall 
+          ^<dir>.<dir2>.content eater 
+          ^<dir>.<dir2>.content-name <> <my-name> 
+          ^<o-dir>.content { <o-cont> <> wall })
+-->
+   (<s> ^operator <o> + =)
+   (<o> ^name move2
+        ^direction <o-dir>
+        ^content <o-cont>)}
+
+
+# Apply*move-avoid
+# If the move2 operator for a direction is selected,
+#    generate an output command to move in that direction.
+
+sp {apply*move2
+   (state <s> ^io.output-link <ol>
+              ^operator <o>)
+   (<o> ^name move2
+        ^direction <dir>)
+-->
+   (<ol> ^move.direction <dir>)}  
+
+
+# Apply*move-avoid*remove-move:
+# If the move2 operator is selected,
+#    and there is a completed move command on the output link,
+#    then remove that command.
+
+sp {apply*move2*remove-move
+   (state <s> ^io.output-link <ol>
+              ^operator.name move2)
+   (<ol> ^move <dir>)
+   (<dir> ^status complete)
+-->
+   (<ol> ^move <dir> -)}
+
+
+# Select*move-avoid
+# If there is a proposed operator to move to a cell 
+#    near another eater in a cell two away from the eater,  
+#    then prefer that operator.
+
+sp {select*move*avoid-eater
+   (state <s> ^operator <o1> +)
+   (<o1> ^name move2)
+-->
+   (<s> ^operator <o1> >)}
+
+
+# Select*move-avoid*bonusfood-better-than-normalfood-empty-eater
+# If there is a proposed operator to move to a cell with bonusfood and 
+#    there is a second proposed operator to move to a cell that is empty or
+#    has normalfood or eater
+#    prefer the first operator.
+
+sp {select*move2*bonusfood-better-than-normalfood-empty-eater
+   (state <s> ^operator <o1> +
+              ^operator <o2> +)
+   (<o1> ^name move2
+         ^content bonusfood)
+   (<o2> ^name move2 
+         ^content << normalfood empty eater >>)
+-->
+   (<s> ^operator <o1> > <o2>)}
+
+
+# Select*move-avoid*normalfood-better-than-empty-eater
+# If there is a proposed operator to move to a cell with normalfood and 
+#    there is a second proposed operator to move to a cell 
+#    that is empty or with other eater
+#    prefer the first operator.
+
+sp {select*move2*normalfood-better-than-empty-eater
+   (state <s> ^operator <o1> +
+              ^operator <o2> +)
+   (<o1> ^name move2 
+         ^content normalfood)
+   (<o2> ^name move2 
+         ^content << empty eater >>)
+-->
+   (<s> ^operator <o1> > <o2>)}
+
+
+# Select*move-avoid*empty-better-than-eater
+# If there is a proposed operator to move to an empty cell 
+#    there is a second proposed operator to move to a cell with eater
+#    prefer the first operator.
+
+sp {select*move2*empty-better-than-eater
+   (state <s> ^operator <o1> +
+              ^operator <o2> +)
+   (<o1> ^name move2 
+         ^content empty)
+   (<o2> ^name move2 
+         ^content eater)
+-->
+   (<s> ^operator <o1> > <o2>)}
+
+
+# Select*move*bonusfood-better-than-normalfood-empty-eater
+# If there is a proposed operator to move to a cell with bonusfood and 
+#    there is a second proposed operator to move to a cell 
+#    that is empty or has normalfood or eater
+#    prefer the first operator.
+
+sp {select*move*bonusfood-better-than-normalfood-empty-eater
+   (state <s> ^operator <o1> +
+              ^operator <o2> +)
+   (<o1> ^name move
+         ^content bonusfood)
+   (<o2> ^name move 
+         ^content << normalfood empty eater >>)
+-->
+   (<s> ^operator <o1> > <o2>)}
+
+
+# Select*move*normalfood-better-than-empty-eater
+# If there is a proposed operator to move to a cell with normalfood and 
+#    there is a second proposed operator to move to a cell that is empty
+#    prefer the first operator.
+
+sp {select*move*normalfood-better-than-empty-eater
+   (state <s> ^operator <o1> +
+              ^operator <o2> +)
+   (<o1> ^name move 
+         ^content normalfood)
+   (<o2> ^name move 
+         ^content << empty eater >>)
+-->
+   (<s> ^operator <o1> > <o2>)}
+
+
+# Select*move*empty-better-than-eater
+# If there is a proposed operator to move to an empty cell 
+#    there is a second proposed operator to move to a cell with eater
+#    prefer the first operator.
+
+sp {select*move*empty-better-than-eater
+   (state <s> ^operator <o1> +
+              ^operator <o2> +)
+   (<o1> ^name move 
+         ^content empty)
+   (<o2> ^name move 
+         ^content eater)
+-->
+   (<s> ^operator <o1> > <o2>)}
